@@ -1,5 +1,0 @@
-charts:
-  - deploy/helm/tracee
-remote: origin
-target-branch: main
-validate-maintainers: false

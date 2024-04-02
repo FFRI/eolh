@@ -1,10 +1,19 @@
+/*
+Copyright (c) Aqua Security Software Ltd.
+Licensed under Apache License 2.0, see LICENCE.tracee and NOTICE.
+
+Copyright (c) FFRI Security, Inc., 2024 / Author: FFRI Security, Inc.
+Licensed under Apache License 2.0, see LICENCE.
+*/
+
 package containers
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/aquasecurity/tracee/pkg/containers/runtime"
-	"github.com/aquasecurity/tracee/pkg/errfmt"
+	"eolh/pkg/containers/runtime"
+	"eolh/pkg/logger"
 )
 
 type runtimeInfoService struct {
@@ -23,15 +32,24 @@ func RuntimeInfoService(sockets runtime.Sockets) runtimeInfoService {
 // Register associates some ContainerEnricher with a runtime, the service can then use it for relevant queries
 func (e *runtimeInfoService) Register(rtime runtime.RuntimeId, enricherBuilder func(socket string) (runtime.ContainerEnricher, error)) error {
 	if !e.sockets.Supports(rtime) {
-		return errfmt.Errorf("error registering enricher: unsupported runtime %s", rtime.String())
+		return fmt.Errorf("error registering enricher: unsupported runtime %s", rtime.String())
 	}
 	socket := e.sockets.Socket(rtime)
 	enricher, err := enricherBuilder(socket)
 	if err != nil {
-		return errfmt.WrapError(err)
+		logger.Errorw("Register Error enricherBuilder")
+		return err
 	}
 	e.enrichers[rtime] = enricher
 	return nil
+}
+
+func (e *runtimeInfoService) Populate(containerRuntime runtime.RuntimeId) (map[uint32]runtime.CRInfo, error) {
+	enricher := e.enrichers[containerRuntime]
+	if enricher != nil {
+		return enricher.Populate()
+	}
+	return nil, fmt.Errorf("unsupported runtime")
 }
 
 // Get calls the inner enricher's Get, based on the containerRuntime parameter if a relevant enricher was registered
@@ -50,7 +68,7 @@ func (e *runtimeInfoService) getFromKnownRuntime(ctx context.Context, containerI
 	if enricher != nil {
 		return enricher.Get(ctx, containerId)
 	}
-	return runtime.ContainerMetadata{}, errfmt.Errorf("unsupported runtime")
+	return runtime.ContainerMetadata{}, fmt.Errorf("unsupported runtime")
 }
 
 // in case where we don't know the container's runtime, we query through all the registered enrichers
@@ -63,5 +81,5 @@ func (e *runtimeInfoService) getFromUnknownRuntime(ctx context.Context, containe
 		}
 	}
 
-	return runtime.ContainerMetadata{}, errfmt.Errorf("no runtime found for container")
+	return runtime.ContainerMetadata{}, fmt.Errorf("no runtime found for container")
 }

@@ -1,25 +1,44 @@
+/*
+Copyright (c) Aqua Security Software Ltd.
+Licensed under Apache License 2.0, see LICENCE.tracee and NOTICE.
+
+Copyright (c) FFRI Security, Inc., 2024 / Author: FFRI Security, Inc.
+Licensed under Apache License 2.0, see LICENCE.
+*/
 package printer
 
 import (
+	"eolh/pkg/trace"
+	"io"
 	"sync"
-
-	"github.com/aquasecurity/tracee/pkg/config"
-	"github.com/aquasecurity/tracee/pkg/metrics"
-	"github.com/aquasecurity/tracee/types/trace"
 )
 
-// Broadcast is a printer that broadcasts events to multiple printers
+type ContainerMode int
+
+const (
+	ContainerModeDisabled ContainerMode = iota
+	ContainerModeEnabled
+	ContainerModeEnriched
+)
+
+type PrinterConfig struct {
+	Kind          string
+	OutPath       string
+	OutFile       io.WriteCloser
+	ContainerMode ContainerMode
+	RelativeTS    bool
+}
+
 type Broadcast struct {
-	PrinterConfigs []config.PrinterConfig
+	PrinterConfigs []PrinterConfig
 	printers       []EventPrinter
 	wg             *sync.WaitGroup
 	eventsChan     []chan trace.Event
 	done           chan struct{}
-	containerMode  config.ContainerMode
+	containerMode  ContainerMode
 }
 
-// NewBroadcast creates a new Broadcast printer
-func NewBroadcast(printerConfigs []config.PrinterConfig, containerMode config.ContainerMode) (*Broadcast, error) {
+func NewBroadcast(printerConfigs []PrinterConfig, containerMode ContainerMode) (*Broadcast, error) {
 	b := &Broadcast{PrinterConfigs: printerConfigs, containerMode: containerMode}
 	return b, b.Init()
 }
@@ -74,6 +93,7 @@ func (b *Broadcast) Print(event trace.Event) {
 	}
 }
 
+/**
 func (b *Broadcast) Epilogue(stats metrics.Stats) {
 	// if you execute epilogue no other events should be sent to the printers,
 	// so we finish the events goroutines
@@ -84,7 +104,7 @@ func (b *Broadcast) Epilogue(stats metrics.Stats) {
 	for _, p := range b.printers {
 		p.Epilogue(stats)
 	}
-}
+}*/
 
 // Close closes Broadcast printer
 func (b *Broadcast) Close() {

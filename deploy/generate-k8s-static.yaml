@@ -1,2 +1,0 @@
-# TODO: move this to k8s docker and makefile
-helm template tracee ./helm/tracee/ > ./kubernetes/tracee/tracee.yaml

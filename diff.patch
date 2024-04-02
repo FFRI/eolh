@@ -1,0 +1,22 @@
+diff --git a/etw/producer.go b/etw/producer.go
+index 8ad85e1..ea4b2a5 100644
+--- a/etw/producer.go
++++ b/etw/producer.go
+@@ -147,0 +148,17 @@
++
++func (p *RealTimeSession) DisableAllProviders() {
++	for _, prov := range p.providers {
++		if guid, err := ParseGUID(prov.GUID); err != nil {
++			EnableTraceEx2(
++				p.sessionHandle,
++				guid,
++				EVENT_CONTROL_CODE_DISABLE_PROVIDER,
++				0,
++				0,
++				0,
++				0,
++				nil,
++			)
++		}
++	}
++}

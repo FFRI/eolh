@@ -1,3 +1,11 @@
+/*
+Copyright (c) Aqua Security Software Ltd.
+Licensed under Apache License 2.0, see LICENCE.tracee and NOTICE.
+
+Copyright (c) FFRI Security, Inc., 2024 / Author: FFRI Security, Inc.
+Licensed under Apache License 2.0, see LICENCE.
+*/
+
 package logger
 
 import (
@@ -56,10 +64,10 @@ func getCallerInfo(skip int) *callerInfo {
 			line = frame.Line
 			file = frame.File
 			// set file as relative path
-			pat := "tracee/"
-			traceeIndex := strings.Index(file, pat)
-			if traceeIndex != -1 {
-				file = file[traceeIndex+len(pat):]
+			pat := "eolh/"
+			eolhIndex := strings.Index(file, pat)
+			if eolhIndex != -1 {
+				file = file[eolhIndex+len(pat):]
 			}
 			pkg = fn[:pkgEnd]
 

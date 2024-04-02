@@ -1,3 +1,11 @@
+/*
+Copyright (c) Aqua Security Software Ltd.
+Licensed under Apache License 2.0, see LICENCE.tracee and NOTICE.
+
+Copyright (c) FFRI Security, Inc., 2024 / Author: FFRI Security, Inc.
+Licensed under Apache License 2.0, see LICENCE.
+*/
+
 package runtime
 
 import (
@@ -32,6 +40,9 @@ const (
 
 type ContainerEnricher interface {
 	Get(ctx context.Context, containerId string) (ContainerMetadata, error)
+	FindContainer(procid int32) string
+	//GetContainerList() ([]types.Container, error)
+	Populate() (map[uint32]CRInfo, error)
 }
 
 // Represents the internal ID of a container runtime
@@ -43,16 +54,14 @@ const (
 	Containerd
 	Crio
 	Podman
-	Garden
 )
 
 var runtimeStringMap = map[RuntimeId]string{
 	Unknown:    "unknown",
 	Docker:     "docker",
 	Containerd: "containerd",
-	Crio:       "crio",
-	Podman:     "podman",
-	Garden:     "garden", // there is no enricher (yet ?) for garden
+	//Crio:       "crio",
+	//Podman:     "podman",
 }
 
 func (runtime RuntimeId) String() string {
@@ -63,17 +72,8 @@ func FromString(str string) RuntimeId {
 	switch str {
 	case "docker":
 		return Docker
-	case "crio":
-		return Crio
-	case "cri-o":
-		return Crio
-	case "podman":
-		return Podman
 	case "containerd":
 		return Containerd
-	case "garden":
-		return Garden
-
 	default:
 		return Unknown
 	}

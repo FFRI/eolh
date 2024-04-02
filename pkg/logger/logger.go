@@ -13,8 +13,7 @@ import (
 )
 
 type (
-	Level       = zapcore.Level
-	AtomicLevel = zap.AtomicLevel
+	Level = zapcore.Level
 )
 
 const (
@@ -32,7 +31,6 @@ type Config = zap.Config
 var (
 	NewDevelopmentConfig = zap.NewDevelopmentConfig
 	NewProductionConfig  = zap.NewProductionConfig
-	NewAtomicLevelAt     = zap.NewAtomicLevelAt
 )
 
 type Encoder = zapcore.Encoder
@@ -71,7 +69,7 @@ func NewLogger(cfg LoggerConfig) LoggerInterface {
 	return zap.New(zapcore.NewCore(
 		cfg.Encoder,
 		zapcore.AddSync(cfg.Writer),
-		cfg.Level,
+		zapcore.Level(cfg.Level),
 	)).Sugar()
 }
 
@@ -88,24 +86,16 @@ const (
 // Tracee offers aggregation and filtering support on top of any logger implementation complying to it's interface.
 type LoggingConfig struct {
 	Logger        LoggerInterface
-	LoggerConfig  LoggerConfig
 	Filter        LoggerFilter
 	Aggregate     bool
 	FlushInterval time.Duration
 }
 
 // LoggerConfig defines the configuration parameters for constructing tracee's logger implementation.
-// Logger user AtomicLevel to allow changing the logging level at runtime.
 type LoggerConfig struct {
 	Writer  io.Writer
-	Level   AtomicLevel
+	Level   Level
 	Encoder Encoder
-}
-
-// SetLevel sets the logging level of the package level logger.
-// It is thread safe.
-func (lc LoggingConfig) SetLevel(lvl Level) {
-	lc.LoggerConfig.Level.SetLevel(lvl)
 }
 
 func defaultEncoder() Encoder {
@@ -115,16 +105,14 @@ func defaultEncoder() Encoder {
 func NewDefaultLoggerConfig() LoggerConfig {
 	return LoggerConfig{
 		Writer:  os.Stderr,
-		Level:   NewAtomicLevelAt(DefaultLevel),
+		Level:   DefaultLevel,
 		Encoder: defaultEncoder(),
 	}
 }
 
 func NewDefaultLoggingConfig() LoggingConfig {
-	loggerConfig := NewDefaultLoggerConfig()
 	return LoggingConfig{
-		Logger:        NewLogger(loggerConfig),
-		LoggerConfig:  loggerConfig,
+		Logger:        NewLogger(NewDefaultLoggerConfig()),
 		Filter:        NewLoggerFilter(),
 		Aggregate:     false,
 		FlushInterval: DefaultFlushInterval,
@@ -142,9 +130,11 @@ func (l *Logger) updateCounter(file string, line int, lvl Level, msg string) {
 
 // aggregateLog will update the log counter if aggregation is enabled.
 // It returns true if the aggregation was done.
-func aggregateLog(l *Logger, lvl Level, msg string, ci *callerInfo) bool {
+func aggregateLog(skip int, l *Logger, lvl Level, msg string) bool {
 	if l.cfg.Aggregate {
-		l.updateCounter(ci.file, ci.line, lvl, msg)
+		callerInfo := getCallerInfo(skip + 1)
+		l.updateCounter(callerInfo.file, callerInfo.line, lvl, msg)
+
 		return true
 	}
 
@@ -202,17 +192,17 @@ func formatCallFlow(funcNames []string) string {
 
 // Debug
 func debugw(skip int, l *Logger, msg string, keysAndValues ...interface{}) {
-	ci := getCallerInfo(skip + 1)
-	if !shouldOutput(msg, DebugLevel, ci) {
+	if aggregateLog(skip+1, l, DebugLevel, msg) {
 		return
 	}
 
-	if aggregateLog(l, DebugLevel, msg, ci) {
+	callerInfo := getCallerInfo(skip + 1)
+	if !shouldOutput(msg, DebugLevel, callerInfo) {
 		return
 	}
 
-	origin := strings.Join([]string{ci.pkg, ci.file, strconv.Itoa(ci.line)}, ":")
-	calls := formatCallFlow(ci.functions)
+	origin := strings.Join([]string{callerInfo.pkg, callerInfo.file, strconv.Itoa(callerInfo.line)}, ":")
+	calls := formatCallFlow(callerInfo.functions)
 	keysAndValues = append(keysAndValues, "origin", origin, "calls", calls)
 
 	l.l.Debugw(msg, keysAndValues...)
@@ -228,12 +218,12 @@ func (l *Logger) Debugw(msg string, keysAndValues ...interface{}) {
 
 // Info
 func infow(skip int, l *Logger, msg string, keysAndValues ...interface{}) {
-	ci := getCallerInfo(skip + 1)
-	if !shouldOutput(msg, InfoLevel, ci) {
+	if aggregateLog(skip+1, l, InfoLevel, msg) {
 		return
 	}
 
-	if aggregateLog(l, InfoLevel, msg, ci) {
+	callerInfo := getCallerInfo(skip + 1)
+	if !shouldOutput(msg, InfoLevel, callerInfo) {
 		return
 	}
 
@@ -250,12 +240,12 @@ func (l *Logger) Infow(msg string, keysAndValues ...interface{}) {
 
 // Warn
 func warnw(skip int, l *Logger, msg string, keysAndValues ...interface{}) {
-	ci := getCallerInfo(skip + 1)
-	if !shouldOutput(msg, WarnLevel, ci) {
+	if aggregateLog(skip+1, l, WarnLevel, msg) {
 		return
 	}
 
-	if aggregateLog(l, WarnLevel, msg, ci) {
+	callerInfo := getCallerInfo(skip + 1)
+	if !shouldOutput(msg, WarnLevel, callerInfo) {
 		return
 	}
 
@@ -272,12 +262,12 @@ func (l *Logger) Warnw(msg string, keysAndValues ...interface{}) {
 
 // Error
 func errorw(skip int, l *Logger, msg string, keysAndValues ...interface{}) {
-	ci := getCallerInfo(skip + 1)
-	if !shouldOutput(msg, ErrorLevel, ci) {
+	if aggregateLog(skip+1, l, ErrorLevel, msg) {
 		return
 	}
 
-	if aggregateLog(l, ErrorLevel, msg, ci) {
+	callerInfo := getCallerInfo(skip + 1)
+	if !shouldOutput(msg, ErrorLevel, callerInfo) {
 		return
 	}
 
@@ -294,12 +284,12 @@ func (l *Logger) Errorw(msg string, keysAndValues ...interface{}) {
 
 // Fatal
 func fatalw(skip int, l *Logger, msg string, keysAndValues ...interface{}) {
-	ci := getCallerInfo(skip + 1)
-	if !shouldOutput(msg, FatalLevel, ci) {
+	if aggregateLog(skip+1, l, FatalLevel, msg) {
 		return
 	}
 
-	if aggregateLog(l, FatalLevel, msg, ci) {
+	callerInfo := getCallerInfo(skip + 1)
+	if !shouldOutput(msg, FatalLevel, callerInfo) {
 		return
 	}
 
@@ -337,12 +327,6 @@ func SetLogger(l LoggerInterface) {
 	}
 
 	pkgLogger.l = l
-}
-
-// SetLevel sets package-level base logger level,
-// it is threadsafe
-func SetLevel(level Level) {
-	pkgLogger.cfg.SetLevel(level)
 }
 
 // Init sets the package-level base logger using given config

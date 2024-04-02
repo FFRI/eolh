@@ -1,9 +1,16 @@
+/*
+Copyright (c) Aqua Security Software Ltd.
+Licensed under Apache License 2.0, see LICENCE.tracee and NOTICE.
+
+Copyright (c) FFRI Security, Inc., 2024 / Author: FFRI Security, Inc.
+Licensed under Apache License 2.0, see LICENCE.
+*/
+
 package runtime
 
 import (
+	"fmt"
 	"os"
-
-	"github.com/aquasecurity/tracee/pkg/errfmt"
 )
 
 // Sockets represent existing container runtime connections
@@ -19,7 +26,7 @@ func (s *Sockets) Register(runtime RuntimeId, socket string) error {
 
 	_, err := os.Stat(socket)
 	if err != nil {
-		return errfmt.Errorf("failed to register runtime socket %v", err)
+		return fmt.Errorf("failed to register runtime socket %v", err)
 	}
 	s.sockets[runtime] = socket
 	return nil
@@ -48,16 +55,10 @@ func Autodiscover(onRegisterFail func(err error, runtime RuntimeId, socket strin
 	}
 	sockets := Sockets{}
 	const (
-		defaultContainerd = "/var/run/containerd/containerd.sock"
-		defaultDocker     = "/var/run/docker.sock"
-		defaultCrio       = "/var/run/crio/crio.sock"
-		defaultPodman     = "/var/run/podman/podman.sock"
+		defaultContainerd = "//./pipe/containerd-containerd"
 	)
 
 	register(&sockets, Containerd, defaultContainerd)
-	register(&sockets, Docker, defaultDocker)
-	register(&sockets, Crio, defaultCrio)
-	register(&sockets, Podman, defaultPodman)
 
 	return sockets
 }

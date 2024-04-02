@@ -1,5 +1,0 @@
-FROM golang:1.21
-
-RUN go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.13.0
-
-WORKDIR /tracee
