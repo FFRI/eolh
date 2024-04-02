@@ -4,7 +4,7 @@ Eolh is a security observability tool for Windows containers.
 
 Currently Eolh is only tested on EKS.
 
-See [the documentation](https://ffri.github.io/eolh/) for details.
+See [the documentation](https://ffri.github.io/eolh-docs/) for details.
 
 ## Acknowledgment & LICENSE
 
